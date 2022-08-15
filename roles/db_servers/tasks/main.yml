@@ -21,7 +21,6 @@
 - name: install mysql
   yum:
     name:
-      - mysql-community-devel*
       - mysql-community-server*
       - MySQL-python
     state: present
@@ -34,14 +33,23 @@
     group: root
     mode: 0644
     backup: true
-  tags: db
+
+- name: allow connection on ports 3306
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ item }}"
+    ctstate: NEW
+    jump: ACCEPT
+  loop:
+    - "3306"
+    - "33060"
 
 - name: enable mysql
   systemd:
     name: mysqld
     state: restarted
     enabled: yes
-  tags: db
 
 - name: get root password
   shell: "grep 'A temporary password is generated for root@localhost' /var/log/mysqld.log | awk -F ' ' '{print $(NF)}'"
@@ -81,27 +89,40 @@
   mysql_replication:
     login_user: root
     login_password: "{{ mysql_root_password }}"
-    mode: getmaster
+    mode: getprimary
   delegate_to: "{{ hostvars['master'].ansible_host }}"
   register: master
   when: mysql_replication_role == 'slave'
+  tags: re
+
+- name: stop replication
+  mysql_replication:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    mode: stopreplica
+  when: mysql_replication_role == 'slave'
+  tags: re
 
 - name: configure replication on the slave
   mysql_replication:
     login_user: root
     login_password: "{{ mysql_root_password }}"
-    mode: changemaster
+    mode: changeprimary
     master_host: "{{ hostvars['master'].ansible_host }}"
     master_user: '{{ mysql_user }}'
     master_password: '{{ mysql_user_password }}'
     master_log_file: '{{ master.File }}'
     master_log_pos: '{{ master.Position }}'
   when: mysql_replication_role == 'slave'
+  tags: re
 
 - name: start replication
   mysql_replication:
-    mode: startslave
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    mode: startreplica
   when: mysql_replication_role == 'slave'
+  tags: re
 
 - name: copy sample database  
   template:

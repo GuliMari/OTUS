@@ -1,7 +1,7 @@
-[server]
-web ansible_host=192.168.88.97
+[web_server]
+web ansible_host=192.168.88.99
 
 [mysql]
-master ansible_host=192.168.88.93 mysql_replication_role=master
-slave ansible_host=192.168.88.96 mysql_replication_role=slave
+master ansible_host=192.168.88.102 mysql_replication_role=master
+slave ansible_host=192.168.88.103 mysql_replication_role=slave
 
