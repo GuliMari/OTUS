@@ -1,0 +1,48 @@
+- name: install grafana
+  yum:
+    name: "https://dl.grafana.com/oss/release/grafana-9.0.7-1.x86_64.rpm"
+    state: present
+
+- name: allow connections on  port 3000
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: '3000'
+    ctstate: NEW
+    jump: ACCEPT
+
+- name: start service grafana-server
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: yes
+
+- name: create or update a grafana user
+  community.grafana.grafana_user:
+    grafana_url: "http://localhost:3000"
+    grafana_user: "admin"
+    grafana_password: "admin"
+    login: grafana_user
+    password: graFana!23
+    name: graf grafov
+    email: graf@somewhere.come
+    is_admin: true
+    state: present 
+
+- name: create prometheus datasource
+  grafana_datasource:
+    grafana_url: "http://localhost:3000"
+    grafana_user: "admin"
+    grafana_password: "admin"
+    name: prometheus
+    ds_type: prometheus
+    ds_url: "http://localhost:9090"
+    state: present
+  tags: gr
+- name: import node exporter dashboard  
+  community.grafana.grafana_dashboard:
+    grafana_url: "http://localhost:3000"
+    grafana_user: "admin"
+    grafana_password: "admin"
+    dashboard_id: '1860'
+  tags: gr

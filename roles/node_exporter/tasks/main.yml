@@ -1,0 +1,51 @@
+- name: create user node_exporter
+  user:
+    name: node_exporter
+    create_home: no
+    shell: /bin/false
+
+- name: download and unzip node_exporter
+  unarchive:
+    src: https://github.com/prometheus/node_exporter/releases/download/v1.4.0-rc.0/node_exporter-1.4.0-rc.0.linux-amd64.tar.gz
+    dest: /tmp/prometheus
+    creates: /tmp/prometheus/node_exporter-1.4.0-rc.0.linux-amd64
+    remote_src: yes
+
+- name: copy node_exporter bin files to /usr/local/bin/
+  copy:
+    src: /tmp/prometheus/node_exporter-1.4.0-rc.0.linux-amd64/node_exporter
+    dest: /usr/local/bin/
+    remote_src: yes
+    mode: preserve
+    owner: node_exporter
+    group: node_exporter
+
+- name: allow connections on  port 9100
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: '9100'
+    ctstate: NEW
+    jump: ACCEPT
+
+- name: create file for node_exporter systemd
+  template:
+    src: node_exporter.service
+    dest: /etc/systemd/system/
+  notify:
+    - systemd_reload
+
+- name: enable and start node_exporter service
+  systemd:
+    name: node_exporter.service
+    state: started
+    enabled: yes
+
+- name: Update prometheus configuration file
+  template:
+    src: prometheus.yml
+    dest: /etc/prometheus/prometheus.yml
+  notify: restart_prometheus
+  tags: node
+
+

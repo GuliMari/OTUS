@@ -1,0 +1,62 @@
+- name: install nginx and apache
+  yum:
+    name: "{{ item }}"
+    state: latest
+  loop:
+      - nginx
+      - httpd
+
+- name: ensure the default apache port is 8080
+  lineinfile:
+    path: /etc/httpd/conf/httpd.conf
+    regexp: '^Listen '
+    insertafter: '^#Listen '
+    line: Listen 8080
+
+- name: start services
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - nginx
+    - httpd
+
+- name: copy configuration files nginx
+  template:
+    src: 3-balance.conf
+    dest: /etc/nginx/conf.d/3-balance.conf
+    owner: root
+    group: root
+
+- name: copy configuration files apache
+  template:
+    src: 3-servers.conf
+    dest: /etc/httpd/conf.d/3-servers.conf
+    owner: root
+    group: root
+
+- name: copy files for servers
+  copy:
+    src: www/
+    dest: /var/www/
+    owner: root
+    group: root
+    directory_mode: yes
+
+- name: create access_log and error_log files for servers
+  copy:
+    src: httpd/
+    dest: /var/log/httpd/
+    owner: root
+    group: root
+    directory_mode: yes
+    
+- name: restart services
+  service:
+    name: "{{ item }}"
+    state: restarted
+  loop:
+      - nginx
+      - httpd
+

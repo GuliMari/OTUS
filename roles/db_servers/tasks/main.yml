@@ -1,0 +1,119 @@
+- name: download Oracle MySQL 8.0 repository
+  ansible.builtin.raw: rpm -Uvh https://repo.mysql.com/mysql80-community-release-el7-6.noarch.rpm
+  ignore_errors: true
+
+- name: import a key from a url
+  ansible.builtin.rpm_key:
+    state: present
+    key: https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
+
+- name: disable default MySQL repository
+  lineinfile:
+    path: /etc/yum.repos.d/mysql-community.repo
+    regexp: 'enabled = '
+    line: enabled = 0
+
+- name: delete mariadb
+  yum:
+    name: mariadb-libs
+    state: removed
+
+- name: install mysql
+  yum:
+    name:
+      - mysql-community-devel*
+      - mysql-community-server*
+      - MySQL-python
+    state: present
+
+- name: create /etc/my.cnf
+  template:
+    src: my.cnf
+    dest: /etc/my.cnf
+    owner: root
+    group: root
+    mode: 0644
+    backup: true
+  tags: db
+
+- name: enable mysql
+  systemd:
+    name: mysqld
+    state: restarted
+    enabled: yes
+  tags: db
+
+- name: get root password
+  shell: "grep 'A temporary password is generated for root@localhost' /var/log/mysqld.log | awk -F ' ' '{print $(NF)}'"
+  register: mysql_temp_password
+
+- name: update expired root user password
+  command: mysql --user root --password={{ mysql_temp_password.stdout }} --connect-expired-password --execute="ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mysql_root_password }}';"
+
+- name: remove all anonymous user accounts
+  mysql_user:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    name: ''
+    host_all: yes
+    state: absent
+
+- name: remove mysql test database
+  mysql_db:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    name: test
+    state: absent
+
+- name: create mysql client user
+  mysql_user:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    name: "{{ mysql_user }}"
+    password: "{{ mysql_user_password }}"
+    priv: '*.*:REPLICATION SLAVE'
+    state: present
+    host: '%'
+  no_log: true
+  when: mysql_replication_role == 'master'
+  
+- name: check master replication status
+  mysql_replication:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    mode: getmaster
+  delegate_to: "{{ hostvars['master'].ansible_host }}"
+  register: master
+  when: mysql_replication_role == 'slave'
+
+- name: configure replication on the slave
+  mysql_replication:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    mode: changemaster
+    master_host: "{{ hostvars['master'].ansible_host }}"
+    master_user: '{{ mysql_user }}'
+    master_password: '{{ mysql_user_password }}'
+    master_log_file: '{{ master.File }}'
+    master_log_pos: '{{ master.Position }}'
+  when: mysql_replication_role == 'slave'
+
+- name: start replication
+  mysql_replication:
+    mode: startslave
+  when: mysql_replication_role == 'slave'
+
+- name: copy sample database  
+  template:
+    src: mysqlsampledatabase.sql 
+    dest: /tmp/mysqlsampledatabase.sql
+  when: mysql_replication_role == 'master'
+  
+- name: insert sample database
+  mysql_db:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    name: testdb
+    state: import
+    target: /tmp/mysqlsampledatabase.sql
+  when: mysql_replication_role == 'master'

@@ -1,0 +1,71 @@
+- name: create user prometheus
+  user:
+    name: prometheus
+    create_home: no
+    shell: /bin/false
+
+- name: create prometheus directories
+  file:
+    path: '{{ item }}prometheus'
+    state: directory
+    owner: prometheus
+    group: prometheus
+  loop:
+    - /tmp/
+    - /etc/
+    - /var/lib/
+
+- name: download and unzip prometheus
+  unarchive:
+    src: "https://github.com/prometheus/prometheus/releases/download/v2.37.0/prometheus-2.37.0.linux-amd64.tar.gz"
+    dest: /tmp/prometheus
+    creates: /tmp/prometheus/prometheus-2.37.0.linux-amd64
+    remote_src: yes
+
+- name: copy configuration files to prometheus directory
+  copy: 
+    src: /tmp/prometheus/prometheus-2.37.0.linux-amd64/{{ item }}
+    dest: /etc/prometheus/
+    remote_src: yes
+    mode: preserve
+    owner: prometheus
+    group: prometheus
+  loop:
+    - console_libraries
+    - consoles
+    - prometheus.yml
+  tags: wtf
+- name: copy prometheus bin files to /usr/local/bin/
+  copy: 
+    src: /tmp/prometheus/prometheus-2.37.0.linux-amd64/{{ item }}
+    dest: /usr/local/bin/
+    remote_src: yes
+    mode: preserve
+    owner: prometheus
+    group: prometheus
+  loop:
+    - prometheus
+    - promtool
+
+- name: allow connections on  ports 9090
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: '9090'
+    ctstate: NEW
+    jump: ACCEPT
+
+- name: create file for prometheus systemd
+  template:
+    src: prometheus.service
+    dest: /etc/systemd/system/
+  notify:
+    - systemd_reload
+
+- name: enable and start prometheus service
+  systemd:
+    name: prometheus
+    state: started
+    enabled: yes
+
+
