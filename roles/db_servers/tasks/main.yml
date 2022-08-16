@@ -84,7 +84,17 @@
     host: '%'
   no_log: true
   when: mysql_replication_role == 'master'
+
+- name: copy sample database  
+  template:
+    src: world.sql 
+    dest: /tmp/world.sql
+  when: mysql_replication_role == 'master'
   
+- name: insert sample database
+  command: mysql --user root --password={{ mysql_root_password }} --execute="SOURCE /tmp/world.sql;"
+  when: mysql_replication_role == 'master'
+
 - name: check master replication status
   mysql_replication:
     login_user: root
@@ -93,15 +103,13 @@
   delegate_to: "{{ hostvars['master'].ansible_host }}"
   register: master
   when: mysql_replication_role == 'slave'
-  tags: re
 
 - name: stop replication
   mysql_replication:
     login_user: root
     login_password: "{{ mysql_root_password }}"
-    mode: stopreplica
+    mode: resetreplica
   when: mysql_replication_role == 'slave'
-  tags: re
 
 - name: configure replication on the slave
   mysql_replication:
@@ -114,7 +122,6 @@
     master_log_file: '{{ master.File }}'
     master_log_pos: '{{ master.Position }}'
   when: mysql_replication_role == 'slave'
-  tags: re
 
 - name: start replication
   mysql_replication:
@@ -122,19 +129,14 @@
     login_password: "{{ mysql_root_password }}"
     mode: startreplica
   when: mysql_replication_role == 'slave'
-  tags: re
 
-- name: copy sample database  
+- name: copy mysqlbackup script
   template:
-    src: mysqlsampledatabase.sql 
-    dest: /tmp/mysqlsampledatabase.sql
-  when: mysql_replication_role == 'master'
-  
-- name: insert sample database
-  mysql_db:
-    login_user: root
-    login_password: "{{ mysql_root_password }}"
-    name: testdb
-    state: import
-    target: /tmp/mysqlsampledatabase.sql
-  when: mysql_replication_role == 'master'
+    src: mysql_backup.sh
+    dest: /usr/local/bin/
+    mode: '0775'
+  when: mysql_replication_role == 'slave'
+
+- name: run mysql backup script
+  shell: /usr/local/bin/mysql_backup.sh
+  when: mysql_replication_role == 'slave'
