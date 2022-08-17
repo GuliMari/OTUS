@@ -30,6 +30,7 @@
     - prometheus
     - node_exporter
     - grafana
+    - elk
 
 - hosts: mysql
   gather_facts: true

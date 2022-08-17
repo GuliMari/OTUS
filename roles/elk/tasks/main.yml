@@ -1,0 +1,52 @@
+- name: copy rpms to remote host
+  copy:
+    src: /home/tw4/rpms/{{ item }}
+    dest: /tmp/
+    mode: preserve
+  loop:
+    - elasticsearch_7.17.3_x86_64-224190-9bcb26.rpm
+    - filebeat_7.17.3_x86_64-224190-4c3205.rpm
+    - logstash_7.17.3_x86_64-224190-3a605f.rpm
+    - kibana_7.17.3_x86_64-224190-b13e53.rpm
+
+- name: install elasticsearch, logstash, kibana and filebeat from repos
+  command: rpm -i /tmp/{{ item }}
+  loop:
+    - elasticsearch_7.17.3_x86_64-224190-9bcb26.rpm
+    - filebeat_7.17.3_x86_64-224190-4c3205.rpm
+    - logstash_7.17.3_x86_64-224190-3a605f.rpm
+    - kibana_7.17.3_x86_64-224190-b13e53.rpm
+
+- name: limit memory sizes used by the JVM
+  copy:
+    content: |
+      -Xms1g
+      -Xmx1g
+    dest: /etc/elasticsearch/jvm.options.d/jvm.options
+
+- name: enable and start elasticsearch
+  systemd:
+    name: elasticsearch.service
+    state: started
+    enabled: yes
+  tags: elk
+
+- name: allow connections on  port 9200
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: '9200'
+    ctstate: NEW
+    jump: ACCEPT
+  tags: elk
+
+  - name: enable and start kibana
+    systemd:
+      name: kibana
+      state: started
+      enabled: yes
+
+  - name: copy kibana configuration file
+      copy:
+        src: kibana.yml
+        dest: /etc/kibana/kibana.yml
