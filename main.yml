@@ -1,6 +1,7 @@
 ---
 
 - hosts: all
+  tags: pre
   gather_facts: true
   become: true
   pre_tasks:
@@ -23,6 +24,7 @@
     - iptables
     
 - hosts: web_server
+  tags: web
   gather_facts: true
   become: true
   roles:
@@ -33,6 +35,7 @@
     - elk
 
 - hosts: mysql
+  tags: db
   gather_facts: true
   become: true
   roles:

@@ -3,8 +3,8 @@
     name: "{{ item }}"
     state: latest
   loop:
-      - nginx
-      - httpd
+    - nginx
+    - httpd
 
 - name: ensure the default apache port is 8080
   lineinfile:
@@ -22,17 +22,24 @@
     - nginx
     - httpd
 
-- name: copy configuration files nginx
+- name: copy nginx.conf
   template:
-    src: 3-balance.conf
-    dest: /etc/nginx/conf.d/3-balance.conf
+    src: nginx.conf
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+
+- name: copy configuration files to conf.d
+  template:
+    src: balance.conf
+    dest: /etc/nginx/conf.d/balance.conf
     owner: root
     group: root
 
 - name: copy configuration files apache
   template:
-    src: 3-servers.conf
-    dest: /etc/httpd/conf.d/3-servers.conf
+    src: servers.conf
+    dest: /etc/httpd/conf.d/servers.conf
     owner: root
     group: root
 
@@ -51,7 +58,7 @@
     owner: root
     group: root
     directory_mode: yes
-    
+
 - name: restart services
   service:
     name: "{{ item }}"

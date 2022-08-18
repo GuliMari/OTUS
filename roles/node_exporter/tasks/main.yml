@@ -46,6 +46,5 @@
     src: prometheus.yml
     dest: /etc/prometheus/prometheus.yml
   notify: restart_prometheus
-  tags: node
 
 

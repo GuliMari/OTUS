@@ -38,11 +38,4 @@
     ds_type: prometheus
     ds_url: "http://localhost:9090"
     state: present
-  tags: gr
-- name: import node exporter dashboard  
-  community.grafana.grafana_dashboard:
-    grafana_url: "http://localhost:3000"
-    grafana_user: "admin"
-    grafana_password: "admin"
-    dashboard_id: '1860'
-  tags: gr
+
