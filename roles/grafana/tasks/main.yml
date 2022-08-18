@@ -11,12 +11,12 @@
     ctstate: NEW
     jump: ACCEPT
 
-- name: start service grafana-server
+- name: start service grafana
   systemd:
     name: grafana-server
     state: started
     enabled: yes
-
+  tags: gr
 - name: create or update a grafana user
   community.grafana.grafana_user:
     grafana_url: "http://localhost:3000"

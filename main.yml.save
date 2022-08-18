@@ -1,0 +1,44 @@
+---
+
+- hosts: all
+  tags: pre
+  gather_facts: true
+  become: true
+  pre_tasks:
+    - name: install updates
+      yum:
+        update_only: yes
+        update_cache: yes
+      changed_when: false
+
+    - name: disable SELinux
+      ansible.posix.selinux:
+        state: disabled
+
+    - name: disable firewall
+      systemd:
+        name: firewalld
+        state: stopped
+        enabled: no
+  roles:
+    - iptables
+    
+- hosts: web_server
+  tags: web
+  gather_facts: true
+  become: true
+  roles:
+    - web_server
+    - 
+
+
+    - grafana
+    - elk
+
+- hosts: mysql
+  tags: db
+  gather_facts: true
+  become: true
+  roles:
+    - db_servers
+
