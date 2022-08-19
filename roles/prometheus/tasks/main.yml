@@ -1,4 +1,4 @@
-- name: create user prometheus
+- name: create prometheus system user
   user:
     name: prometheus
     create_home: no
@@ -22,7 +22,7 @@
     creates: /tmp/prometheus/prometheus-2.37.0.linux-amd64
     remote_src: yes
 
-- name: copy configuration files to prometheus directory
+- name: copy configuration files to /etc/prometheus directory
   copy: 
     src: /tmp/prometheus/prometheus-2.37.0.linux-amd64/{{ item }}
     dest: /etc/prometheus/
@@ -34,7 +34,7 @@
     - console_libraries
     - consoles
     - prometheus.yml
-  tags: wtf
+
 - name: copy prometheus bin files to /usr/local/bin/
   copy: 
     src: /tmp/prometheus/prometheus-2.37.0.linux-amd64/{{ item }}
@@ -67,5 +67,3 @@
     name: prometheus
     state: started
     enabled: yes
-
-

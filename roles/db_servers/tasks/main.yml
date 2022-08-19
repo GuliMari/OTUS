@@ -2,21 +2,10 @@
   ansible.builtin.raw: rpm -Uvh https://repo.mysql.com/mysql80-community-release-el7-6.noarch.rpm
   ignore_errors: true
 
-- name: import a key from a url
+- name: import a gpg-key from a url
   ansible.builtin.rpm_key:
     state: present
     key: https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
-
-- name: disable default MySQL repository
-  lineinfile:
-    path: /etc/yum.repos.d/mysql-community.repo
-    regexp: 'enabled = '
-    line: enabled = 0
-
-- name: delete mariadb
-  yum:
-    name: mariadb-libs
-    state: removed
 
 - name: install mysql
   yum:
@@ -25,7 +14,7 @@
       - MySQL-python
     state: present
 
-- name: create /etc/my.cnf
+- name: copy mysql configuration file
   template:
     src: my.cnf
     dest: /etc/my.cnf
@@ -51,11 +40,11 @@
     state: restarted
     enabled: yes
 
-- name: get root password
+- name: get default temporary root password
   shell: "grep 'A temporary password is generated for root@localhost' /var/log/mysqld.log | awk -F ' ' '{print $(NF)}'"
   register: mysql_temp_password
 
-- name: update expired root user password
+- name: update root password
   command: mysql --user root --password={{ mysql_temp_password.stdout }} --connect-expired-password --execute="ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mysql_root_password }}';"
 
 - name: remove all anonymous user accounts
@@ -73,7 +62,7 @@
     name: test
     state: absent
 
-- name: create mysql client user
+- name: create mysql client user for replication
   mysql_user:
     login_user: root
     login_password: "{{ mysql_root_password }}"
@@ -120,27 +109,23 @@
     mode: startreplica
   when: mysql_replication_role == 'slave'
 
-- name: copy sample database  
+- name: copy sample database to master server
   template:
     src: world.sql 
     dest: /tmp/world.sql
   when: mysql_replication_role == 'master'
-  tags: re
   
 - name: insert sample database
   command: mysql --user root --password={{ mysql_root_password }} --execute="SOURCE /tmp/world.sql;"
   when: mysql_replication_role == 'master'
-  tags: re
 
-- name: copy mysqlbackup script
+- name: copy mysqlbackup script for slave server
   template:
     src: mysql_backup.sh
     dest: /usr/local/bin/
     mode: '0775'
   when: mysql_replication_role == 'slave'
-  tags: re
 
 - name: run mysql backup script
   shell: /usr/local/bin/mysql_backup.sh
   when: mysql_replication_role == 'slave'
-  tags: re

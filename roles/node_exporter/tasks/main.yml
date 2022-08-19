@@ -1,4 +1,4 @@
-- name: create user node_exporter
+- name: create system user node_exporter
   user:
     name: node_exporter
     create_home: no
@@ -41,7 +41,7 @@
     state: started
     enabled: yes
 
-- name: Update prometheus configuration file
+- name: Update prometheus configuration file to collect metrics from node_exporter
   template:
     src: prometheus.yml
     dest: /etc/prometheus/prometheus.yml

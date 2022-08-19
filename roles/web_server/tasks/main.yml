@@ -13,7 +13,7 @@
     insertafter: '^#Listen '
     line: Listen 8080
 
-- name: start services
+- name: start and enable nginx and httpd
   systemd:
     name: "{{ item }}"
     state: started
@@ -29,21 +29,21 @@
     owner: root
     group: root
 
-- name: copy configuration files to conf.d
+- name: copy reverse proxy configuration files to conf.d
   template:
     src: balance.conf
     dest: /etc/nginx/conf.d/balance.conf
     owner: root
     group: root
 
-- name: copy configuration files apache
+- name: copy configuration files for apache as backend server
   template:
     src: servers.conf
     dest: /etc/httpd/conf.d/servers.conf
     owner: root
     group: root
 
-- name: copy files for servers
+- name: copy default index pages in apache web servers
   copy:
     src: www/
     dest: /var/www/
@@ -51,7 +51,7 @@
     group: root
     directory_mode: yes
 
-- name: create access_log and error_log files for servers
+- name: create access_log and error_log files for apache web servers
   copy:
     src: httpd/
     dest: /var/log/httpd/

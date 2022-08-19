@@ -9,15 +9,16 @@
     - logstash_7.17.3_x86_64-224190-3a605f.rpm
     - kibana_7.17.3_x86_64-224190-b13e53.rpm
 
-- name: install elasticsearch, logstash, kibana and filebeat from repos
+- name: install elasticsearch, logstash, kibana and filebeat 
   command: rpm -i /tmp/{{ item }}
   loop:
     - elasticsearch_7.17.3_x86_64-224190-9bcb26.rpm
     - filebeat_7.17.3_x86_64-224190-4c3205.rpm
     - logstash_7.17.3_x86_64-224190-3a605f.rpm
     - kibana_7.17.3_x86_64-224190-b13e53.rpm
+  ignore_errors: yes
 
-- name: allow connections on  ports
+- name: allow connections on required ports
   iptables:
     chain: INPUT
     protocol: tcp
@@ -42,23 +43,21 @@
     state: started
     enabled: yes
 
-- name: copy kibana configuration file
+- name: copy kibana configuration file defining server's port & host  and elasticsearch hosts
   template:
     src: kibana.yml
     dest: /etc/kibana/kibana.yml
     owner: root
     group: kibana
     mode: preserve
-  tags: elk
 
 - name: enable and start kibana
   systemd:
     name: kibana
     state: started
     enabled: yes
-  tags: elk
 
-- name: copy logstash configuration files
+- name: copy logstash configuration files to define data, config and log paths; beat input and elasticsearch output
   template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
@@ -68,34 +67,29 @@
   with_items:
     - { src: logstash.yml, dest: /etc/logstash/logstash.yml }
     - { src: logstash-nginx-es.conf, dest: /etc/logstash/conf.d/ }
-  tags: elk
 
 - name: enable and start logstash
   systemd:
     name: logstash
     state: started
     enabled: yes
-  tags: elk
 
-- name: copy filebeat configuration file
+- name: copy filebeat configuration file to use nginx logs as input and logstash as output
   template:
     src: filebeat.yml
     dest: /etc/filebeat/filebeat.yml
     owner: root
     group: root
     mode: preserve
-  tags: elk
 
 - name: enable and start filebeat
   systemd:
     name: filebeat
     state: started
     enabled: yes
-  tags: elk
 
 - name: restart nginx
   systemd:
     name: nginx
     state: restarted
-  tags: elk
 

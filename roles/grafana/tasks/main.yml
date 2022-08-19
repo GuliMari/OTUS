@@ -16,18 +16,6 @@
     name: grafana-server
     state: started
     enabled: yes
-  tags: gr
-- name: create or update a grafana user
-  community.grafana.grafana_user:
-    grafana_url: "http://localhost:3000"
-    grafana_user: "admin"
-    grafana_password: "admin"
-    login: grafana_user
-    password: graFana!23
-    name: graf grafov
-    email: graf@somewhere.come
-    is_admin: true
-    state: present 
 
 - name: create prometheus datasource
   grafana_datasource:
