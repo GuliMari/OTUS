@@ -22,4 +22,4 @@ mysql_user_password: user_password
 # Files:
 Change default index page in Apache web servers by changing /roles/web_server/files/www/html/index.html file.
 # Run playbook:
-This playbook requires root access, so run it with global "become: yes" in your main.yml.
+This playbook requires root access, so run it with "become: true" in your main.yml.
